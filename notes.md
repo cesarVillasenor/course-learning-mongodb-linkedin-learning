@@ -149,6 +149,205 @@ db.recipes.find({}, {title: 1, prep_time: 1, _id: 0 }).toArray();
 ***
 # 4.0 Data and schema modeling
 
-## 4.1
+## 4.1 How we need to think differently
+Data should be together
+
+## 4.2 Basic indexes
+
 ```javascript
+db.recipes.find({"cook_time": 10}, {"title": 1});
+db.recipes.find({"cook_time": 10}, {"title": 1}).explain("executionStats");
+db.recipes.find({"title": "Tacos"}, {"title": 1}).explain("executionStats");
+db.recipes.getIndexes()
+db.recipes.createIndex({"cook_time": -1})
+// cook_time_-1
+db.recipes.getIndexes()
+db.recipes.find({"cook_time": 10}, {"title": 1}).explain("executionStats");
+db.recipes.dropIndex("cook_time_-1");
 ```
+
+## 4.3 Using different collection types
+```javascript
+db.createCollection("error_log", {capped: true, size: 10000, max: 10000});
+```
+
+## 4.4 Challenge: Avoiding joins
+```javascript
+// Create json data structure for recipes avoiding joins
+```
+
+## 4.5 Solution: Avoiding joins
+```javascript
+{
+    "user_id": 1,
+    "first_name": "Yoshi",
+    "last_name": "yoshi@zxy.com"
+    "backing_level": 2,
+    "shipping_address": {
+       "street_name": "123 Mushroom Ln",
+       "city": "Gondor",
+       "state": "MS",
+       "zip": "12345", 
+    },
+    "rewards":{
+        "book",
+        "beach towel",
+    },
+}
+```
+***
+# 5.0 Coding with MongoDB
+Examples on coding
+
+## 5.1 Python 
+Install pymongo from requirements.txt
+
+examples on lessons 5.1
+
+## 5.2 Node.js
+npm install
+examples on lessons 5.2
+
+## 5.3 PHP
+Install PECL
+sexamples on lessons 5.3
+
+## 5.4 Golang
+Install Golang MongoDB driver
+examples on lessons 5.4
+
+## 5.5 How to use GridFS to store files
+examples on lessons 5.5
+```
+mongofiles list --db=files --quiet
+mongofiles get pike-place.jpg  --db=files 
+mongofiles put apple-pie.jpg --db=files 
+mongofiles put ozmaofoz.pdz --db=files 
+mongofiles delete ozmaofoz.pdz --db=files 
+```
+
+***
+# 6.0 Server Administration
+
+## 6.1 MongoDB config file
+Config examples files
+
+```
+systemLog:
+  destination: file
+  path: /usr/local/var/log/mongodb/mongo.log
+  logAppend: true
+storage:
+  dbPath: /usr/local/var/mongodb
+net:
+  bindIp: 127.0.0.1
+  port: 27017
+```
+
+```
+systemLog:
+  destination: file
+  path: /var/log/mongodb/mongo.log
+  logAppend: true
+storage:
+  dbPath: /store/db
+  directoryPerDB: true
+net:
+  bindIp: 127.0.0.1
+  port: 27017
+  maxIncomingConnections: 65536
+processManagement:
+  fork: true
+security:
+   authorization: enabled
+   javascriptEnabled: true
+replication:
+   replSetName: cookerSet
+```
+
+Select specific config
+```
+mongod --config=mongod.cfg
+```
+## 6.2 Replication 
+
+On 3 docker container
+#### Commands to setup replicas
+
+`mongod --replSet cookingSet --dbpath=/store/data/rs1 --port 27017 --smallfiles --oplogSize 200`
+
+`mongod --replSet cookingSet --dbpath=/store/data/rs2 --port 27018 --smallfiles --oplogSize 200`
+
+`mongod --replSet cookingSet --dbpath=/store/data/rs3 --port 27019 --smallfiles --oplogSize 200`
+
+#### Config Replica Set
+
+```
+config = {
+  _id: "cookingSet",
+  "members": [
+    {_id: 0, host: "localhost:27017"},
+    {_id: 1, host: "localhost:27018"},
+    {_id: 2, host: "localhost:27019"},
+  ]
+}
+```
+
+#### Initiate Replica Set
+
+`rs.initiate(config)`
+
+#### Status of Replica Set
+
+`rs.status()`
+
+#### Connect Replica Set
+
+`mongo "mongodb://localhost:27017,localhost:27018,localhost:27019/?replicaSet=cookingSet"`
+
+
+## 6.3 Sharding
+
+
+
+## 6.4 Authentication and authorization
+
+mongo
+```
+use admin
+```
+
+```javascript
+db.createUser(
+  {
+    user: "taco",
+    pwd: passwordPrompt(),
+    roles: [ { role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase" ]
+  }
+);
+db.adminCommand({ shutdown: 1 });
+
+```
+add to mongod.conf
+```
+security:
+    authorization: enabled
+```
+
+```
+mongo --authenticationDatabase "admin" -u "admin" -p
+use admin
+```
+
+```javascript
+db.auth("taco", passwordPrompt());
+```
+## 6.5 Backups
+
+```javascript
+db.fsyncLock()
+db.fsyncUnlsock()
+```
+### Backup and restore
+- mongodump
+- mongorestore
